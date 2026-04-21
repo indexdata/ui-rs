@@ -32,6 +32,18 @@ const AddCondition = ({ request, performAction }) => {
       .then(() => setIsOpen(false));
   };
 
+  const validate = values => {
+    const hasCondition = !!values.loanCondition;
+    const hasCost = showCost && !!values.cost?.trim();
+
+    if (hasCondition || hasCost) return {};
+
+    return {
+      loanCondition: true,
+      cost: true,
+    };
+  };
+
   return (
     <>
       <Button buttonStyle="dropdownItem" onClick={() => setIsOpen(true)}>
@@ -45,8 +57,8 @@ const AddCondition = ({ request, performAction }) => {
       >
         <Form
           onSubmit={onSubmit}
-          render={({ handleSubmit, submitting, values, form }) => {
-            const canSubmit = !!values.loanCondition || (showCost && !!values.cost);
+          validate={validate}
+          render={({ handleSubmit, submitting, invalid, form }) => {
             return (
               <form onSubmit={handleSubmit}>
                 <FormattedMessage
@@ -99,7 +111,7 @@ const AddCondition = ({ request, performAction }) => {
                   <Button
                     buttonStyle="primary"
                     onClick={form.submit}
-                    disabled={submitting || actionPending || !canSubmit}
+                    disabled={submitting || invalid || actionPending}
                   >
                     <FormattedMessage id="stripes-reshare.actions.add-condition" />
                   </Button>
