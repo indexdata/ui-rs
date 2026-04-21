@@ -168,15 +168,13 @@ const ChatPane = ({ onToggle, request }) => {
     if (isLoading) {
       return <Layout className="padding-all-gutter flex centerContent"><Spinner /></Layout>;
     }
-    if (notifications.length === 0) {
-      return (
-        <Layout className={`padding-all-gutter flex ${css.noMessages}`}>
-          <FormattedMessage id="ui-rs.view.chatPane.noMessages" />
-        </Layout>
-      );
-    }
     return (
       <div className={css.noTopMargin}>
+        {notifications.length === 0 && (
+          <Layout className={`padding-all-gutter flex ${css.noMessages}`}>
+            <FormattedMessage id="ui-rs.view.chatPane.noMessages" />
+          </Layout>
+        )}
         {notifications.map((notification, index) => (
           <ChatMessage
             key={notification.id ?? `msg-${index}`}
