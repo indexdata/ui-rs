@@ -8,7 +8,7 @@ import { ChatMessage } from './components';
 import css from './ChatPane.css';
 import { useNotificationList, useNotificationMutations } from './useNotifications';
 
-const ENTER_KEY = 13;
+const ENTER_KEY = 'Enter';
 const AUTO_MARK_SEEN_DELAY_MS = 1500;
 
 const normalise = (n) => ({
@@ -115,7 +115,7 @@ const ChatPane = ({ onToggle, request }) => {
       onSubmit={submit}
       render={({ form, handleSubmit, pristine }) => {
         const onEnterPress = async (e) => {
-          if (e.keyCode === ENTER_KEY && e.shiftKey === false) {
+          if (e.key === ENTER_KEY && e.shiftKey === false) {
             e.preventDefault();
             if (!pristine) {
               await handleSubmit();
