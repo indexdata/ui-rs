@@ -11,6 +11,8 @@ import { useUnseenCount } from '../components/chat/useNotifications';
 import { useRequestAside } from '../components/RequestAside';
 import css from './ViewRoute.css';
 
+const ASIDE_SLOTS = { chat: ChatPane };
+
 const subheading = (req, params) => {
   if (!req || params.id !== req.id) return undefined;
   const title = req?.illRequest?.bibliographicInfo?.title;
@@ -36,7 +38,7 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
   );
   const actions = actionsData?.actions ?? [];
 
-  const { AsidePane, toggle, isOpen } = useRequestAside({ chat: ChatPane });
+  const { AsidePane, toggle, isOpen } = useRequestAside(ASIDE_SLOTS);
   const unseenCount = useUnseenCount(request);
 
   if (!hasRequestLoaded) return null;
