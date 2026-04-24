@@ -34,8 +34,8 @@ const ChatPane = ({ onToggle, request }) => {
   const intl = useIntl();
   const sendCallout = useIntlCallout();
 
-  const { data, isLoading } = useNotificationList(request);
-  const { post, markSeen, markSeenMany } = useNotificationMutations(request);
+  const { data, isLoading } = useNotificationList(reqId);
+  const { post, markSeen, markSeenMany } = useNotificationMutations(reqId);
   const markSeenManyMutate = markSeenMany.mutate;
 
   const notifications = useMemo(() => {

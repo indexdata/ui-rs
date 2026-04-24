@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Form, Field } from 'react-final-form';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { useQueryClient } from 'react-query';
 import { useIsActionPending } from '@projectreshare/stripes-reshare';
 import { useStripes } from '@folio/stripes/core';
 import { Button, Col, Icon, Label, Layout, Modal, ModalFooter, RadioButton, Row, TextArea, TextField } from '@folio/stripes/components';
 
+import { useInvalidateNotifications } from '../../chat/useNotifications';
 import { actionMeta } from '../actionMeta';
 import { LoanCondition } from '../../../constants/iso18626';
 
@@ -13,7 +13,7 @@ const AddCondition = ({ request, performAction }) => {
   const [isOpen, setIsOpen] = useState(false);
   const intl = useIntl();
   const stripes = useStripes();
-  const queryClient = useQueryClient();
+  const invalidateNotifications = useInvalidateNotifications(request?.id);
   const actionPending = !!useIsActionPending(request.id);
   const icon = actionMeta['add-condition']?.icon;
   const showCost = stripes.config?.reshare?.showCost
@@ -32,7 +32,9 @@ const AddCondition = ({ request, performAction }) => {
       error: 'ui-rs.actions.add-condition.error',
     })
       .then(() => {
-        queryClient.invalidateQueries(`broker/patron_requests/${request.id}/notifications`);
+        return invalidateNotifications();
+      })
+      .then(() => {
         setIsOpen(false);
       });
   };

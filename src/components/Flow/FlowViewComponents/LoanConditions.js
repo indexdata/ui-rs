@@ -7,7 +7,7 @@ import { formatConditionCode, formatConditionCost, formatConditionNote } from '.
 const LoanConditions = (props) => {
   const { formatDate, formatMessage } = useIntl();
   const { request } = props;
-  const { data } = useNotificationList(request);
+  const { data } = useNotificationList(request?.id);
 
   const conditions = (data?.items || [])
     .filter(n => n.kind === 'condition')
