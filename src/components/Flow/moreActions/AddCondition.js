@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Form, Field } from 'react-final-form';
 import { FormattedMessage, useIntl } from 'react-intl';
+import { useQueryClient } from 'react-query';
 import { useIsActionPending } from '@projectreshare/stripes-reshare';
 import { useStripes } from '@folio/stripes/core';
 import { Button, Col, Icon, Label, Layout, Modal, ModalFooter, RadioButton, Row, TextArea, TextField } from '@folio/stripes/components';
@@ -12,6 +13,7 @@ const AddCondition = ({ request, performAction }) => {
   const [isOpen, setIsOpen] = useState(false);
   const intl = useIntl();
   const stripes = useStripes();
+  const queryClient = useQueryClient();
   const actionPending = !!useIsActionPending(request.id);
   const icon = actionMeta['add-condition']?.icon;
   const showCost = stripes.config?.reshare?.showCost
@@ -29,7 +31,10 @@ const AddCondition = ({ request, performAction }) => {
       success: 'ui-rs.actions.add-condition.success',
       error: 'ui-rs.actions.add-condition.error',
     })
-      .then(() => setIsOpen(false));
+      .then(() => {
+        queryClient.invalidateQueries(`broker/patron_requests/${request.id}/notifications`);
+        setIsOpen(false);
+      });
   };
 
   const validate = values => {

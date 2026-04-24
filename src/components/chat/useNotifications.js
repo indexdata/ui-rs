@@ -6,7 +6,7 @@ const useNotificationList = (request) => {
   return useOkapiQuery(
     `broker/patron_requests/${request?.id}/notifications`,
     {
-      searchParams: { side: request?.side },
+      searchParams: { side: request?.side, limit: 1000 },
       staleTime: 30 * 1000,
       enabled: Boolean(request?.id && request?.side),
     }
