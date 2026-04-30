@@ -1,24 +1,37 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useQuery } from 'react-query';
 import { useIntl } from 'react-intl';
+import { useLocation } from 'react-router-dom';
+import queryString from 'query-string';
 import { useOkapiKy } from '@folio/stripes/core';
 import { MessageBanner, Pane, Paneset } from '@folio/stripes/components';
 import { useCloseDirect } from '@projectreshare/stripes-reshare';
+import AppNameContext from '../AppNameContext';
+import { buildPatronRequestsCql } from './buildPatronRequestsCql';
 import parseErrRes from '../util/parseErrRes';
 
-const PullSlipRoute = ({ match }) => {
-  const requestId = match.params?.id;
-  const [pdfUrl, setPdfUrl] = useState();
-  const [errMsg, setErrMsg] = useState(null);
+const PullSlipsRoute = () => {
+  const appName = useContext(AppNameContext);
+  const location = useLocation();
   const intl = useIntl();
   const okapiKy = useOkapiKy();
-  const title = intl.formatMessage({ id: 'ui-rs.pullSlip' });
   const close = useCloseDirect();
+  const [pdfUrl, setPdfUrl] = useState();
+  const [errMsg, setErrMsg] = useState(null);
+  const title = intl.formatMessage({ id: 'ui-rs.pullSlips' });
+
+  const cql = buildPatronRequestsCql(location);
+  const side = appName === 'supply' ? 'lending' : 'borrowing';
+  const urlParams = queryString.parse(location.search);
+  const hasFilter = Boolean(urlParams.query || urlParams.filters);
 
   const pdfQuery = useQuery({
-    queryKey: ['broker/pullslips', requestId],
-    queryFn: () => okapiKy.post('broker/pullslips', { json: { illTransactionIds: [requestId] } }).blob(),
-    enabled: !!requestId,
+    queryKey: ['broker/pullslips', cql, side],
+    queryFn: () => okapiKy.post('broker/pullslips', {
+      json: { cql },
+      searchParams: { side },
+    }).blob(),
+    enabled: hasFilter,
     retry: false,
   });
 
@@ -42,7 +55,12 @@ const PullSlipRoute = ({ match }) => {
         dismissible
         paneTitle={title}
       >
-        {pdfQuery.isError && (
+        {!hasFilter && (
+          <MessageBanner type="error">
+            {intl.formatMessage({ id: 'ui-rs.pullSlip.noFilter' })}
+          </MessageBanner>
+        )}
+        {hasFilter && pdfQuery.isError && (
           <MessageBanner type="error">
             {intl.formatMessage({ id: 'ui-rs.pullSlip.error' }, { errMsg })}
           </MessageBanner>
@@ -53,4 +71,4 @@ const PullSlipRoute = ({ match }) => {
   );
 };
 
-export default PullSlipRoute;
+export default PullSlipsRoute;
