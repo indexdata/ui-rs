@@ -200,7 +200,7 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
                         const color = attn ? 'red' : (msgs > 0 ? 'primary' : 'default');
                         const ariaLabel = [
                           ...(attn ? [intl.formatMessage({ id: 'ui-rs.needsAttention' })] : []),
-                          ...(msgs > 0 ? [intl.formatMessage({ id: 'ui-rs.unread' })] : []),
+                          ...(msgs > 0 ? [intl.formatMessage({ id: 'ui-rs.unreadCount' }, { count: msgs })] : []),
                           ...(cost ? [intl.formatMessage({ id: 'ui-rs.hasCost' })] : []),
                         ].join(' ');
                         return (
