@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext } from 'react';
 import { useQuery } from 'react-query';
 import { useIntl } from 'react-intl';
 import { useLocation } from 'react-router-dom';
@@ -7,8 +7,8 @@ import { useOkapiKy } from '@folio/stripes/core';
 import { MessageBanner, Pane, Paneset } from '@folio/stripes/components';
 import { useCloseDirect } from '@projectreshare/stripes-reshare';
 import AppNameContext from '../AppNameContext';
+import PdfPane from '../components/PdfPane';
 import { buildPatronRequestsCql } from './buildPatronRequestsCql';
-import parseErrRes from '../util/parseErrRes';
 
 const PullSlipsRoute = () => {
   const appName = useContext(AppNameContext);
@@ -16,8 +16,6 @@ const PullSlipsRoute = () => {
   const intl = useIntl();
   const okapiKy = useOkapiKy();
   const close = useCloseDirect();
-  const [pdfUrl, setPdfUrl] = useState();
-  const [errMsg, setErrMsg] = useState(null);
   const title = intl.formatMessage({ id: 'ui-rs.pullSlips' });
 
   const cql = buildPatronRequestsCql(location);
@@ -35,40 +33,19 @@ const PullSlipsRoute = () => {
     retry: false,
   });
 
-  useEffect(() => {
-    if (pdfQuery.isSuccess && !pdfUrl) {
-      setPdfUrl(URL.createObjectURL(pdfQuery.data));
-    }
-  }, [pdfQuery.isSuccess, pdfQuery.data, pdfUrl]);
-
-  useEffect(() => {
-    if (pdfQuery.isError) {
-      parseErrRes(pdfQuery.error).then(setErrMsg);
-    }
-  }, [pdfQuery.isError, pdfQuery.error]);
-
-  return (
-    <Paneset>
-      <Pane
-        defaultWidth="100%"
-        onClose={close}
-        dismissible
-        paneTitle={title}
-      >
-        {!hasFilter && (
+  if (!hasFilter) {
+    return (
+      <Paneset>
+        <Pane defaultWidth="100%" onClose={close} dismissible paneTitle={title}>
           <MessageBanner type="error">
             {intl.formatMessage({ id: 'ui-rs.pullSlip.noFilter' })}
           </MessageBanner>
-        )}
-        {hasFilter && pdfQuery.isError && (
-          <MessageBanner type="error">
-            {intl.formatMessage({ id: 'ui-rs.pullSlip.error' }, { errMsg })}
-          </MessageBanner>
-        )}
-        {pdfUrl && <iframe src={pdfUrl} width="100%" height="100%" title={title} />}
-      </Pane>
-    </Paneset>
-  );
+        </Pane>
+      </Paneset>
+    );
+  }
+
+  return <PdfPane pdfQuery={pdfQuery} paneTitle={title} />;
 };
 
 export default PullSlipsRoute;

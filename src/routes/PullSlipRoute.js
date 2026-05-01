@@ -1,19 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useQuery } from 'react-query';
 import { useIntl } from 'react-intl';
 import { useOkapiKy } from '@folio/stripes/core';
-import { MessageBanner, Pane, Paneset } from '@folio/stripes/components';
-import { useCloseDirect } from '@projectreshare/stripes-reshare';
-import parseErrRes from '../util/parseErrRes';
+import PdfPane from '../components/PdfPane';
 
 const PullSlipRoute = ({ match }) => {
   const requestId = match.params?.id;
-  const [pdfUrl, setPdfUrl] = useState();
-  const [errMsg, setErrMsg] = useState(null);
   const intl = useIntl();
   const okapiKy = useOkapiKy();
-  const title = intl.formatMessage({ id: 'ui-rs.pullSlip' });
-  const close = useCloseDirect();
 
   const pdfQuery = useQuery({
     queryKey: ['broker/pullslips', requestId],
@@ -22,34 +16,11 @@ const PullSlipRoute = ({ match }) => {
     retry: false,
   });
 
-  useEffect(() => {
-    if (pdfQuery.isSuccess && !pdfUrl) {
-      setPdfUrl(URL.createObjectURL(pdfQuery.data));
-    }
-  }, [pdfQuery.isSuccess, pdfQuery.data, pdfUrl]);
-
-  useEffect(() => {
-    if (pdfQuery.isError) {
-      parseErrRes(pdfQuery.error).then(setErrMsg);
-    }
-  }, [pdfQuery.isError, pdfQuery.error]);
-
   return (
-    <Paneset>
-      <Pane
-        defaultWidth="100%"
-        onClose={close}
-        dismissible
-        paneTitle={title}
-      >
-        {pdfQuery.isError && (
-          <MessageBanner type="error">
-            {intl.formatMessage({ id: 'ui-rs.pullSlip.error' }, { errMsg })}
-          </MessageBanner>
-        )}
-        {pdfUrl && <iframe src={pdfUrl} width="100%" height="100%" title={title} />}
-      </Pane>
-    </Paneset>
+    <PdfPane
+      pdfQuery={pdfQuery}
+      paneTitle={intl.formatMessage({ id: 'ui-rs.pullSlip' })}
+    />
   );
 };
 
