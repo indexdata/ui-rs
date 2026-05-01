@@ -8,7 +8,7 @@ import { MessageBanner, Pane, Paneset } from '@folio/stripes/components';
 import { useCloseDirect } from '@projectreshare/stripes-reshare';
 import AppNameContext from '../AppNameContext';
 import PdfPane from '../components/PdfPane';
-import { buildPatronRequestsCql } from './buildPatronRequestsCql';
+import { buildPatronRequestsCql } from '../util/buildPatronRequestsCql';
 
 const PullSlipsRoute = () => {
   const appName = useContext(AppNameContext);

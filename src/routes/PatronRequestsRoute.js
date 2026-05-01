@@ -6,7 +6,7 @@ import { useOkapiKy } from '@folio/stripes/core';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import PatronRequests from '../components/PatronRequests';
 import { ServiceType, ServiceLevel } from '../constants/iso18626';
-import { buildPatronRequestsCql } from './buildPatronRequestsCql';
+import { buildPatronRequestsCql } from '../util/buildPatronRequestsCql';
 
 const PER_PAGE = 100;
 

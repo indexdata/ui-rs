@@ -22,7 +22,7 @@ import {
 import { AppIcon, IfPermission, useStripes } from '@folio/stripes/core';
 import { SearchAndSortQuery, PersistedPaneset } from '@folio/stripes/smart-components';
 import { useIntlCallout } from '@projectreshare/stripes-reshare';
-import { MAX_RECORDS_PER_PDF } from '../../routes/buildPatronRequestsCql';
+import { MAX_RECORDS_PER_PDF } from '../../util/buildPatronRequestsCql';
 import AppNameContext from '../../AppNameContext';
 import Filters from './Filters';
 import Search from './Search';
