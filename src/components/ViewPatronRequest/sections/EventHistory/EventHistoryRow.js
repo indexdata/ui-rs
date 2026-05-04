@@ -1,4 +1,4 @@
-import { useIntl } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { Accordion, Badge, Layout } from '@folio/stripes/components';
 import formattedDateTime from '../../../../util/formattedDateTime';
 import EventHistoryDetails from './EventHistoryDetails';
@@ -110,9 +110,15 @@ const EventHistoryRow = ({ event }) => {
   const statusLabel = getStatusLabel(intl, event.eventStatus);
   const summary = getEventSummary(intl, event);
   const badgeColor = STATUS_BADGE_COLOR[event.eventStatus] || 'default';
+  const user = event.eventData?.user;
 
   const summaryRow = (
     <>
+      {user && (
+        <Layout element="span" className={css.summaryUser}>
+          <FormattedMessage id="ui-rs.eventHistory.summary.byUser" values={{ user }} />
+        </Layout>
+      )}
       {summary && (
         <span className={css.summaryText}>
           {summary}

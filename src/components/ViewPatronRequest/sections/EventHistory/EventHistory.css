@@ -31,6 +31,12 @@
   padding-right: var(--gutter-static, 1rem);
 }
 
+/* margin-right: auto keeps the user pinned left when summaryText is absent */
+.summaryUser {
+  flex-shrink: 0;
+  margin-right: auto;
+}
+
 .eventBody {
   background-color: rgba(255, 255, 255, 0.5);
 }
