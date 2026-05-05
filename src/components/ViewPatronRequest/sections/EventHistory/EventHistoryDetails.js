@@ -117,7 +117,7 @@ const EventHistoryDetails = ({ event }) => {
         {eventData.user && (
           <Col xs={2}>
             <KeyValue
-              label={<FormattedMessage id="ui-rs.eventHistory.user" />}
+              label={<FormattedMessage id="ui-rs.eventHistory.actor" />}
               value={eventData.user}
             />
           </Col>

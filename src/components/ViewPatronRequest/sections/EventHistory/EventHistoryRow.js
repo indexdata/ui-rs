@@ -110,18 +110,17 @@ const EventHistoryRow = ({ event }) => {
   const statusLabel = getStatusLabel(intl, event.eventStatus);
   const summary = getEventSummary(intl, event);
   const badgeColor = STATUS_BADGE_COLOR[event.eventStatus] || 'default';
-  const user = event.eventData?.user;
+  const actor = event.eventData?.user;
 
   const summaryRow = (
     <>
-      {user && (
-        <Layout element="span" className={css.summaryUser}>
-          <FormattedMessage id="ui-rs.eventHistory.summary.byUser" values={{ user }} />
-        </Layout>
-      )}
-      {summary && (
+      {(summary || actor) && (
         <span className={css.summaryText}>
           {summary}
+          {summary && actor && ' · '}
+          {actor && (
+            <FormattedMessage id="ui-rs.eventHistory.summary.byActor" values={{ actor }} />
+          )}
         </span>
       )}
       <Layout element="span" className="padding-end-gutter">
