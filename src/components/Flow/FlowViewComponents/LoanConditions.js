@@ -4,6 +4,12 @@ import { Accordion, MultiColumnList } from '@folio/stripes/components';
 import { useNotificationList } from '../../chat/useNotifications';
 import { formatConditionCode, formatConditionCost, formatConditionNote } from '../../../util/formatCondition';
 
+const conditionStatusId = (receipt) => {
+  if (receipt === 'ACCEPTED') return 'ui-rs.flow.loanConditions.status.accepted';
+  if (receipt === 'REJECTED') return 'ui-rs.flow.loanConditions.status.rejected';
+  return 'ui-rs.flow.loanConditions.status.pending';
+};
+
 const LoanConditions = (props) => {
   const { formatDate, formatMessage } = useIntl();
   const { request } = props;
@@ -21,6 +27,7 @@ const LoanConditions = (props) => {
     cost: n => formatConditionCost(n),
     note: n => formatConditionNote(n),
     createdAt: n => (n.createdAt ? formatDate(n.createdAt) : ''),
+    status: n => <FormattedMessage id={conditionStatusId(n.receipt)} />,
   };
 
   return (
@@ -34,10 +41,11 @@ const LoanConditions = (props) => {
           cost: <FormattedMessage id="ui-rs.flow.loanConditions.cost" />,
           note: <FormattedMessage id="ui-rs.flow.loanConditions.note" />,
           createdAt: <FormattedMessage id="ui-rs.flow.loanConditions.dateReceived" />,
+          status: <FormattedMessage id="ui-rs.flow.loanConditions.status" />,
         }}
         contentData={conditions}
         formatter={formatter}
-        visibleColumns={['condition', 'cost', 'createdAt', 'note']}
+        visibleColumns={['condition', 'cost', 'createdAt', 'status', 'note']}
       />
     </Accordion>
   );
