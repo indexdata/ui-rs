@@ -16,7 +16,7 @@ const LoanConditions = (props) => {
   const { data } = useNotificationList(request?.id);
 
   const conditions = (data?.items || [])
-    .filter(n => n.kind === 'condition')
+    .filter(n => n.kind === 'condition' && n.fromSymbol === request?.supplierSymbol)
     .slice()
     .sort((a, b) => (a.createdAt > b.createdAt ? -1 : a.createdAt < b.createdAt ? 1 : 0));
 
