@@ -139,7 +139,14 @@ const messages = {
 
 const renderFlowRoute = () => render(
   <MemoryRouter initialEntries={['/requests/pr-1/flow']}>
-    <IntlProvider locale="en" messages={messages} onError={() => {}}>
+    <IntlProvider
+      locale="en"
+      messages={messages}
+      onError={(err) => {
+        if (err.code === 'MISSING_TRANSLATION') return;
+        throw err;
+      }}
+    >
       <FlowRoute request={requestFixture} actions={actionsFixture} />
     </IntlProvider>
   </MemoryRouter>
