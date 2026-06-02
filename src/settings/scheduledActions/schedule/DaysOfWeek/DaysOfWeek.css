@@ -1,0 +1,37 @@
+/* Fixed-size round day toggles in a simple row. They keep their size rather
+   than stretching to fill spare width. */
+.days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.day {
+  /* Fixed height; width grows with the label so locales whose short weekday
+     names are full words (e.g. ar-EG) get a pill rather than clipped text.
+     min-width keeps short Latin names (Mon) as circles. */
+  min-width: 2.5rem;
+  height: 2.5rem;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.5rem;
+  white-space: nowrap;
+  border-radius: 1.25rem;
+  border: 1px solid #b9b9b9;
+  background: #fff;
+  color: #404040;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.day:hover {
+  border-color: #2b78e4;
+}
+
+.daySelected {
+  border-color: #2b78e4;
+  background: #2b78e4;
+  color: #fff;
+}
