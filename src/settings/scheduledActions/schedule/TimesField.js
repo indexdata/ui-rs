@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Field } from 'react-final-form';
 import { FieldArray } from 'react-final-form-arrays';
-import { RepeatableField, Timepicker } from '@folio/stripes/components';
+import { Label, RepeatableField, Timepicker } from '@folio/stripes/components';
 
 // A new row defaults to midnight (UTC) rather than empty, so the opened dropdown
 // lands somewhere sensible. The Z-form is what the Timepicker's parser and our
@@ -25,7 +25,7 @@ const TimesField = ({ name, headLabels, addLabel, timeZone }) => {
       {({ fields }) => (
         <RepeatableField
           fields={fields}
-          headLabels={headLabels}
+          headLabels={<Label tagName="span">{headLabels}</Label>}
           addLabel={addLabel}
           onAdd={() => { setAddedIndex(fields.length); fields.push(NEW_TIME_SEED); }}
           onRemove={(index) => { setAddedIndex(null); fields.remove(index); }}

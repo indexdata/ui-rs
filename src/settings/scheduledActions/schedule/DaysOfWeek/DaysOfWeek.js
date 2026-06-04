@@ -1,6 +1,6 @@
 import React from 'react';
 import { useIntl } from 'react-intl';
-import { Label } from '@folio/stripes/components';
+import { Button, Label } from '@folio/stripes/components';
 import { WEEK_ORDER, dayName } from '../scheduleExpression';
 import css from './DaysOfWeek.css';
 
@@ -32,16 +32,16 @@ const DaysOfWeek = ({ id, label, required, input }) => {
         aria-labelledby={labelId}
       >
         {WEEK_ORDER.map((dow) => (
-          <button
-            type="button"
+          <Button
             key={dow}
+            buttonStyle={selected.has(dow) ? 'primary' : 'default'}
+            marginBottom0
             onClick={() => toggle(dow)}
             aria-pressed={selected.has(dow)}
             aria-label={dayName(intl, dow, 'long')}
-            className={selected.has(dow) ? `${css.day} ${css.daySelected}` : css.day}
           >
             {dayName(intl, dow, 'short')}
-          </button>
+          </Button>
         ))}
       </div>
     </>
