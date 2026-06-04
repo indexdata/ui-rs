@@ -640,6 +640,7 @@
   "settings.scheduledActions.update.error": "Error updating scheduled action",
   "settings.scheduledActions.delete.heading": "Delete scheduled action",
   "settings.scheduledActions.delete.message": "Are you sure you want to delete the “{name}” scheduled action? This cannot be undone.",
+  "settings.scheduledActions.delete.error": "Error deleting scheduled action",
   "settings.scheduledActions.field.actionName": "Action",
   "settings.scheduledActions.field.schedule": "Schedule",
   "settings.scheduledActions.field.scheduleUtc": "Schedule (UTC)",
