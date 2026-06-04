@@ -8,7 +8,7 @@ jest.mock('@folio/stripes-components/lib/Icon', () => require('../../test/iconMo
 jest.mock('@folio/stripes/core', () => require('../../test/stripesCore').makeStripesCoreMock(() => ({})));
 
 const baseInitial = {
-  actionName: 'email',
+  actionName: 'email-pullslips',
   days: [],
   times: [],
   batchQuery: '',
@@ -16,7 +16,7 @@ const baseInitial = {
 };
 
 const messages = {
-  'ui-rs.settings.scheduledActions.action.email': 'Email pull slips',
+  'ui-rs.settings.scheduledActions.action.email-pullslips': 'Email pull slips',
   'ui-rs.settings.scheduledActions.action.age-requests': 'Age requests',
   'ui-rs.settings.scheduledActions.params.attachPdf': 'Attach pull slip PDF to email',
 };
@@ -46,7 +46,7 @@ describe('ScheduledActionForm', () => {
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     const values = onSubmit.mock.calls[0][0];
-    expect(values.actionName).toBe('email');
+    expect(values.actionName).toBe('email-pullslips');
     expect(values.days).toEqual([1]);
     expect(values.actionParams.attachPdf).toBe(true);
   });

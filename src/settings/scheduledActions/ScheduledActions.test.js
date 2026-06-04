@@ -17,7 +17,7 @@ const PATH = '/settings/rs/scheduled-actions';
 
 const messages = {
   'ui-rs.settings.scheduledActions.heading': 'Scheduled actions',
-  'ui-rs.settings.scheduledActions.action.email': 'Email pull slips',
+  'ui-rs.settings.scheduledActions.action.email-pullslips': 'Email pull slips',
   'ui-rs.settings.scheduledActions.scheduleSummary': '{days} at {times}',
   'ui-rs.settings.scheduledActions.everyDay': 'Every day',
 };
@@ -35,7 +35,7 @@ describe('ScheduledActions list', () => {
       'broker/batch_actions': {
         about: { count: 1 },
         items: [
-          { id: 'a1', actionName: 'email', schedule: '0 6,13 * * 1,3', createdAt: '2026-05-01T00:00:00Z' },
+          { id: 'a1', actionName: 'email-pullslips', schedule: '0 6,13 * * 1,3', createdAt: '2026-05-01T00:00:00Z' },
         ],
       },
     });

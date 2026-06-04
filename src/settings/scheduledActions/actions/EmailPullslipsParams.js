@@ -3,7 +3,7 @@ import { Field } from 'react-final-form';
 import { FormattedMessage } from 'react-intl';
 import { Checkbox } from '@folio/stripes/components';
 
-// Per-action settings for the `email` action (display: "Email pull slips").
+// Per-action settings for the `email-pullslips` action (display: "Email pull slips").
 // Renders into the namespaced actionParams.* so action types can't collide.
 const EmailPullslipsParams = () => (
   <Field

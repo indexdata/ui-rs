@@ -6,7 +6,7 @@ import AgeRequestsParams from './AgeRequestsParams';
 // entry. Adding an action type = one entry + a params component; the common
 // section (action select / schedule / batchQuery) and CRUD shells are untouched.
 const actionRegistry = {
-  email: EmailPullslipsParams,
+  'email-pullslips': EmailPullslipsParams,
   'age-requests': AgeRequestsParams,
 };
 

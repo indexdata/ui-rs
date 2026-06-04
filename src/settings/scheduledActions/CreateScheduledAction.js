@@ -7,7 +7,7 @@ import ScheduledActionForm from './ScheduledActionForm';
 import { buildBatchActionBody } from './model';
 
 const INITIAL_VALUES = {
-  actionName: 'email',
+  actionName: 'email-pullslips',
   days: [],
   times: [],
   batchQuery: '',

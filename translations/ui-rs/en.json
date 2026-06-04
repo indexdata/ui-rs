@@ -652,7 +652,7 @@
   "settings.scheduledActions.everyDay": "Every day",
   "settings.scheduledActions.options": "Options",
   "settings.scheduledActions.addTime": "Add time",
-  "settings.scheduledActions.action.email": "Email pull slips",
+  "settings.scheduledActions.action.email-pullslips": "Email pull slips",
   "settings.scheduledActions.action.age-requests": "Age requests",
   "settings.scheduledActions.params.attachPdf": "Attach pull slip PDF to email",
   "settings.scheduledActions.params.standard": "Standard (e.g. 720h)",
