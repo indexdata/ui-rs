@@ -1,6 +1,5 @@
 import React from 'react';
 import { Form, Field } from 'react-final-form';
-import arrayMutators from 'final-form-arrays';
 import { FormattedMessage, useIntl } from 'react-intl';
 import {
   Accordion,
@@ -15,8 +14,9 @@ import {
 } from '@folio/stripes/components';
 
 import DaysOfWeek from './schedule/DaysOfWeek/DaysOfWeek';
-import TimesField from './schedule/TimesField';
+import { isHourListValid, isMinuteValid } from './schedule/scheduleExpression';
 import actionRegistry from './actions/actionRegistry';
+import css from './ScheduledActionForm.css';
 
 // The common form. The top row pairs the action-type selector with the query;
 // a Schedule section holds the days + times; then the per-action params block
@@ -30,13 +30,29 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
     label: intl.formatMessage({ id: `ui-rs.settings.scheduledActions.action.${name}` }),
   }));
 
+  // A schedule needs a query, at least one day and one hour, and a minute < 60
+  // (blank minute defaults to 0). Empty days would otherwise emit an RRULE that
+  // fires weekly on an arbitrary weekday rather than "every day", so we require
+  // an explicit selection.
+  const msg = (id) => intl.formatMessage({ id: `ui-rs.settings.scheduledActions.validate.${id}` });
+  const validate = (values) => {
+    const errors = {};
+    if (!values.batchQuery || !values.batchQuery.trim()) errors.batchQuery = msg('batchQuery');
+    if (!values.days || values.days.length === 0) errors.days = msg('days');
+    const hours = (values.hours ?? '').toString().trim();
+    if (!hours) errors.hours = msg('hoursRequired');
+    else if (!isHourListValid(hours)) errors.hours = msg('hoursInvalid');
+    if (!isMinuteValid(values.minute)) errors.minute = msg('minute');
+    return errors;
+  };
+
   return (
     <Form
       onSubmit={onSubmit}
       initialValues={initialValues}
-      mutators={{ ...arrayMutators }}
+      validate={validate}
     >
-      {({ handleSubmit, values, pristine, form }) => {
+      {({ handleSubmit, values, pristine, invalid, form }) => {
         const ParamsComponent = actionRegistry[values?.actionName];
         const footer = (
           <PaneFooter
@@ -55,7 +71,7 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
                 id="clickable-save-scheduled-action"
                 type="submit"
                 buttonStyle="primary mega"
-                disabled={pristine || submitting}
+                disabled={pristine || invalid || submitting}
                 onClick={handleSubmit}
                 marginBottom0
               >
@@ -98,6 +114,7 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
                   <Field
                     id="scheduled-action-batchQuery"
                     name="batchQuery"
+                    required
                     component={TextField}
                     label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.batchQuery" />}
                   />
@@ -114,17 +131,35 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
                       <Field
                         id="scheduled-action-days"
                         name="days"
+                        required
                         component={DaysOfWeek}
                         label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.days" />}
                       />
                     </Col>
                     <Col xs={12} md={4}>
-                      <TimesField
-                        name="times"
-                        timeZone="UTC"
-                        headLabels={<FormattedMessage id="ui-rs.settings.scheduledActions.field.times" />}
-                        addLabel={<FormattedMessage id="ui-rs.settings.scheduledActions.addTime" />}
+                      <Field
+                        id="scheduled-action-hours"
+                        name="hours"
+                        required
+                        marginBottom0
+                        aria-describedby="scheduled-action-hours-help"
+                        component={TextField}
+                        label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.hours" />}
                       />
+                      <div id="scheduled-action-hours-help" className={css.help}>
+                        <FormattedMessage id="ui-rs.settings.scheduledActions.field.hoursHelp" />
+                      </div>
+                      <Field
+                        id="scheduled-action-minute"
+                        name="minute"
+                        marginBottom0
+                        aria-describedby="scheduled-action-minute-help"
+                        component={TextField}
+                        label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.minute" />}
+                      />
+                      <div id="scheduled-action-minute-help" className={css.help}>
+                        <FormattedMessage id="ui-rs.settings.scheduledActions.field.minuteHelp" />
+                      </div>
                     </Col>
                   </Row>
                 </Accordion>

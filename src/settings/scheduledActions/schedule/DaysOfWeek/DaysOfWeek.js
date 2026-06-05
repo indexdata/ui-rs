@@ -8,9 +8,9 @@ import css from './DaysOfWeek.css';
 // of cron day-of-week numbers (Sun=0 .. Sat=6) in Monday-first order. Rendered
 // as a row of toggle buttons; the short weekday name shows in the circle while
 // the full name is the accessible label, both localized via Intl.
-const DaysOfWeek = ({ id, label, required, input }) => {
+const DaysOfWeek = ({ id, label, required, input, meta }) => {
   const intl = useIntl();
-  const { value = [], onChange } = input;
+  const { value = [], onChange, onBlur } = input;
   const selected = new Set(value);
 
   const toggle = (dow) => {
@@ -18,12 +18,15 @@ const DaysOfWeek = ({ id, label, required, input }) => {
     if (next.has(dow)) next.delete(dow); else next.add(dow);
     // Re-derive in canonical week order so the stored value is stable.
     onChange(WEEK_ORDER.filter((d) => next.has(d)));
+    // Mark touched so a "select a day" error can surface once they've interacted.
+    onBlur?.();
   };
 
   const labelId = label ? `${id}-label` : undefined;
+  const error = meta?.touched && meta?.error;
 
   return (
-    <>
+    <div className={css.field}>
       {label && <Label tagName="span" id={labelId} required={required}>{label}</Label>}
       <div
         className={css.days}
@@ -44,7 +47,8 @@ const DaysOfWeek = ({ id, label, required, input }) => {
           </Button>
         ))}
       </div>
-    </>
+      {error && <div className={css.error} role="alert">{error}</div>}
+    </div>
   );
 };
 

@@ -3,77 +3,102 @@ import {
   scheduleToExpression,
   scheduleFromExpression,
   describeSchedule,
+  isHourListValid,
+  isMinuteValid,
 } from './scheduleExpression';
 
 const intl = createIntl({
   locale: 'en',
   messages: {
     'ui-rs.settings.scheduledActions.scheduleSummary': '{days} at {times}',
-    'ui-rs.settings.scheduledActions.everyDay': 'Every day',
   },
 });
 
 describe('scheduleExpression', () => {
   describe('scheduleToExpression', () => {
-    it('builds a single 5-field cron from days + times', () => {
+    it('builds a weekly RRULE from days, hours and a shared minute', () => {
       expect(scheduleToExpression({
         days: [1, 2, 3, 4, 5],
-        times: ['06:00:00', '13:00:00'],
-      })).toBe('0 6,13 * * 1,2,3,4,5');
+        hours: '6, 13',
+        minute: 30,
+      })).toBe('FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=6,13;BYMINUTE=30;BYSECOND=0');
     });
 
-    it('floors minutes to :00 (minutes are ignored for now)', () => {
-      expect(scheduleToExpression({ days: [1], times: ['06:30', '06:45'] }))
-        .toBe('0 6 * * 1');
+    it('defaults a blank/invalid minute to 0', () => {
+      expect(scheduleToExpression({ days: [1], hours: '6', minute: '' }))
+        .toBe('FREQ=WEEKLY;BYDAY=MO;BYHOUR=6;BYMINUTE=0;BYSECOND=0');
     });
 
-    it('keeps Sunday as cron dow 0 and sorts', () => {
-      expect(scheduleToExpression({ days: [0, 1], times: ['09:00'] }))
-        .toBe('0 9 * * 0,1');
+    it('maps Sunday to SU, sorts and dedupes hours', () => {
+      expect(scheduleToExpression({ days: [0, 1], hours: '9, 9, 6', minute: 0 }))
+        .toBe('FREQ=WEEKLY;BYDAY=SU,MO;BYHOUR=6,9;BYMINUTE=0;BYSECOND=0');
     });
 
-    it('falls back to * for empty days/times', () => {
-      expect(scheduleToExpression({ days: [], times: [] })).toBe('0 * * * *');
+    it('pins BYSECOND=0 and omits BYDAY/BYHOUR when empty', () => {
+      expect(scheduleToExpression({ days: [], hours: '', minute: 0 })).toBe('FREQ=WEEKLY;BYMINUTE=0;BYSECOND=0');
     });
   });
 
   describe('scheduleFromExpression', () => {
-    it('parses a comma-list cron back into days + times', () => {
-      expect(scheduleFromExpression('0 6,13 * * 1,3')).toEqual({
+    it('parses a weekly RRULE back into days, an hours string and minute', () => {
+      expect(scheduleFromExpression('FREQ=WEEKLY;BYDAY=MO,WE;BYHOUR=6,13;BYMINUTE=30')).toEqual({
         days: [1, 3],
-        times: ['06:00:00', '13:00:00'],
+        hours: '6, 13',
+        minute: 30,
       });
     });
 
-    it('expands day ranges (e.g. as a hand-written 1-5)', () => {
-      expect(scheduleFromExpression('0 6 * * 1-5').days)
-        .toEqual([1, 2, 3, 4, 5]);
+    it('defaults minute to 0 when BYMINUTE is absent', () => {
+      expect(scheduleFromExpression('FREQ=WEEKLY;BYDAY=MO;BYHOUR=6').minute).toBe(0);
     });
 
-    it('orders parsed days Monday-first', () => {
-      expect(scheduleFromExpression('0 6 * * 0,1').days).toEqual([1, 0]);
+    it('orders parsed days Monday-first and tolerates ordinal BYDAY codes', () => {
+      expect(scheduleFromExpression('FREQ=WEEKLY;BYDAY=2MO,-1SU;BYHOUR=6').days).toEqual([1, 0]);
     });
 
-    it('returns null for a non 5-field expression', () => {
+    it('returns null when the string is not an RRULE we recognize', () => {
       expect(scheduleFromExpression('nonsense')).toBeNull();
-      expect(scheduleFromExpression('0 6 * *')).toBeNull();
+      expect(scheduleFromExpression('BYDAY=MO')).toBeNull();
+      expect(scheduleFromExpression('')).toBeNull();
     });
   });
 
-  it('round-trips days + times through cron', () => {
-    const input = { days: [1, 3, 0], times: ['06:00:00', '18:00:00'] };
+  it('round-trips days, hours and minute through RRULE', () => {
+    const input = { days: [1, 3, 0], hours: '6, 18', minute: 15 };
     const back = scheduleFromExpression(scheduleToExpression(input));
     expect(back.days.sort()).toEqual([0, 1, 3]);
-    expect(back.times).toEqual(input.times);
+    expect(back.hours).toBe('6, 18');
+    expect(back.minute).toBe(15);
   });
 
   describe('describeSchedule', () => {
-    it('renders a localized human-readable summary', () => {
-      expect(describeSchedule('0 6,13 * * 1,3', intl)).toBe('Mon, Wed at 06:00, 13:00');
+    it('renders a localized summary including the shared minute', () => {
+      expect(describeSchedule('FREQ=WEEKLY;BYDAY=MO,WE;BYHOUR=6,13;BYMINUTE=30', intl))
+        .toBe('Mon, Wed at 06:30, 13:30');
     });
 
-    it('falls back to the raw string when unparseable', () => {
-      expect(describeSchedule('@weekly', intl)).toBe('@weekly');
+    it('falls back to the raw string without a day or hour', () => {
+      expect(describeSchedule('FREQ=WEEKLY;BYMINUTE=0', intl)).toBe('FREQ=WEEKLY;BYMINUTE=0');
+      expect(describeSchedule('not-a-rrule', intl)).toBe('not-a-rrule');
+    });
+  });
+
+  describe('validators', () => {
+    it('accepts comma/space-delimited hours in 0-23 and rejects others', () => {
+      expect(isHourListValid('9, 15')).toBe(true);
+      expect(isHourListValid('0,23')).toBe(true);
+      expect(isHourListValid('')).toBe(false);
+      expect(isHourListValid('9,')).toBe(false);
+      expect(isHourListValid('24')).toBe(false);
+      expect(isHourListValid('9, x')).toBe(false);
+    });
+
+    it('accepts a blank minute or 0-59 and rejects 60+', () => {
+      expect(isMinuteValid('')).toBe(true);
+      expect(isMinuteValid(0)).toBe(true);
+      expect(isMinuteValid('59')).toBe(true);
+      expect(isMinuteValid('60')).toBe(false);
+      expect(isMinuteValid('x')).toBe(false);
     });
   });
 });

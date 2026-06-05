@@ -19,7 +19,6 @@ const messages = {
   'ui-rs.settings.scheduledActions.heading': 'Scheduled actions',
   'ui-rs.settings.scheduledActions.action.email-pullslips': 'Email pull slips',
   'ui-rs.settings.scheduledActions.scheduleSummary': '{days} at {times}',
-  'ui-rs.settings.scheduledActions.everyDay': 'Every day',
 };
 
 const renderList = () => renderWithRs(
@@ -35,7 +34,7 @@ describe('ScheduledActions list', () => {
       'broker/batch_actions': {
         about: { count: 1 },
         items: [
-          { id: 'a1', actionName: 'email-pullslips', schedule: '0 6,13 * * 1,3', createdAt: '2026-05-01T00:00:00Z' },
+          { id: 'a1', actionName: 'email-pullslips', schedule: 'FREQ=WEEKLY;BYDAY=MO,WE;BYHOUR=6,13;BYMINUTE=0', createdAt: '2026-05-01T00:00:00Z' },
         ],
       },
     });
@@ -43,7 +42,7 @@ describe('ScheduledActions list', () => {
     renderList();
 
     await waitFor(() => expect(screen.getByText('Email pull slips')).toBeInTheDocument());
-    // Schedule cron is shown via the human-readable describeSchedule().
+    // Schedule RRULE is shown via the human-readable describeSchedule().
     expect(screen.getByText('Mon, Wed at 06:00, 13:00')).toBeInTheDocument();
     // The list queried the broker batch-actions endpoint.
     expect(mockOkapi.mock.calls.some(([path]) => path === 'broker/batch_actions')).toBe(true);

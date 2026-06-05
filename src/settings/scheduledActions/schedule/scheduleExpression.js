@@ -1,91 +1,138 @@
-// The one place the schedule wire-format lives. Today: 5-field cron, which the
-// broker validates via robfig/cron. We will likely move the backend to rrule
-// later; when we do, only this file changes (the form keeps producing
-// { days, times }, and `times` already carries HH:MM so no data is lost).
+// The one place the schedule wire-format lives. The broker validates the
+// schedule as an RRULE string (teambition/rrule-go), e.g.
+// "FREQ=WEEKLY;BYDAY=MO,WE;BYHOUR=6,13;BYMINUTE=30" (every Mon & Wed at 06:30
+// and 13:30). The form deals in { days, hours, minute } and only this file
+// knows the wire format.
 //
-// Interim simplification: minutes are ignored (floored to :00). That guarantees
-// any {days, times} the form can produce maps to a single valid cron expression
-// (`0 <hours> * * <dows>`), avoiding the minute/hour cross-product problem.
+// We model a weekly recurrence: FREQ=WEEKLY, the selected weekdays as BYDAY, the
+// run hours as BYHOUR, and a single shared minute-past-the-hour as BYMINUTE. A
+// single RRULE fires on the cross-product of its BY* lists, so it cannot bind a
+// distinct minute to each hour — hence one minute applies to every hour (the
+// form makes that explicit rather than faking per-time minutes).
 //
-// `days` is an array of cron day-of-week numbers (Sun=0 .. Sat=6) — i.e. the
-// wire format itself, so day handling here is near-identity. Human-readable day
-// names are derived from the locale (see dayName), never stored.
+// BYSECOND=0 is always pinned: the broker sets Dtstart = now before building the
+// rule, and rrule (rrule-go) inherits any unspecified component from Dtstart, so
+// without it a "09:00" schedule would fire at 09:00:<creation-second>.
+//
+// `days` is an array of 0-based day-of-week numbers (Sun=0 .. Sat=6) — the same
+// numbering JS Date.getDay() uses; only this file translates them to/from RRULE
+// BYDAY codes. `hours` is a user-entered comma-delimited string ("9, 15") so the
+// form can validate the raw text. Human-readable day names are derived from the
+// locale (see dayName), never stored.
 
 // Display order for the week, Monday-first.
 export const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const byWeekOrder = (a, b) => WEEK_ORDER.indexOf(a) - WEEK_ORDER.indexOf(b);
 
-// 2023-01-01 was a Sunday (cron dow 0); offsetting by the dow gives a date that
-// falls on that weekday, which we hand to Intl for a localized name.
+// RRULE BYDAY codes indexed by 0-based day-of-week (Sun=0 .. Sat=6).
+const DOW_TO_RRULE = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+const RRULE_TO_DOW = Object.fromEntries(DOW_TO_RRULE.map((code, dow) => [code, dow]));
+
+// 2023-01-01 was a Sunday (dow 0); offsetting by the dow gives a date that falls
+// on that weekday, which we hand to Intl for a localized name.
 const dowRefDate = (dow) => new Date(Date.UTC(2023, 0, 1 + dow));
 export const dayName = (intl, dow, weekday = 'short') => intl.formatDate(
   dowRefDate(dow),
   { weekday, timeZone: 'UTC' },
 );
 
-const pad2 = (n) => `0${n}`.slice(-2);
+// Parse the comma/space-delimited hours string into a sorted, deduped list of
+// integers within [0, 23]. Anything unparseable is dropped.
+const parseHourList = (hours) => [...new Set(
+  String(hours)
+    .split(',')
+    .map(s => parseInt(s.trim(), 10))
+    .filter(h => Number.isInteger(h) && h >= 0 && h <= 23)
+)].sort((a, b) => a - b);
 
-// Expand a single cron field (one of the comma/range/`*` forms we might read
-// back) into a sorted array of integers within [min, max].
-const expandField = (field, min, max) => {
-  if (field === '*') return [];
-  const out = new Set();
-  for (const part of field.split(',')) {
-    if (part.includes('-')) {
-      const [lo, hi] = part.split('-').map(Number);
-      if (Number.isInteger(lo) && Number.isInteger(hi)) {
-        for (let n = lo; n <= hi; n++) if (n >= min && n <= max) out.add(n);
-      }
-    } else {
-      const n = Number(part);
-      if (Number.isInteger(n) && n >= min && n <= max) out.add(n);
-    }
-  }
-  return [...out].sort((a, b) => a - b);
+// Coerce a minute-past-the-hour to an integer in [0, 59]; blank/invalid -> 0.
+const toMinute = (m) => {
+  const n = parseInt(m, 10);
+  return Number.isInteger(n) && n >= 0 && n <= 59 ? n : 0;
 };
 
-// { days: [1, 3], times: ['06:00', '13:30'] } -> '0 6,13 * * 1,3'
-export function scheduleToExpression({ days = [], times = [] } = {}) {
-  const hours = [...new Set(
-    times
-      .map(t => parseInt(String(t).split(':')[0], 10))
-      .filter(h => Number.isInteger(h) && h >= 0 && h <= 23)
-  )].sort((a, b) => a - b);
+// Validators shared with the form so the parsing rules live in one place.
+// A valid hours string is non-empty and every comma-separated token is an
+// integer in [0, 23].
+export const isHourListValid = (hours) => {
+  const tokens = String(hours).split(',').map(t => t.trim());
+  if (!tokens.length || tokens.some(t => t === '')) return false;
+  return tokens.every(t => /^\d+$/.test(t) && Number(t) <= 23);
+};
 
+// A valid minute is blank (defaults to 0) or an integer in [0, 59].
+export const isMinuteValid = (minute) => {
+  const s = String(minute).trim();
+  if (s === '') return true;
+  return /^\d+$/.test(s) && Number(s) <= 59;
+};
+
+// Parse a wire RRULE into numeric { days, hours, minute }; null if it isn't an
+// RRULE we recognize (must have FREQ).
+const parseExpression = (expression) => {
+  if (typeof expression !== 'string') return null;
+  const parts = expression.trim().split(';').filter(Boolean);
+  if (!parts.length) return null;
+  const rule = {};
+  for (const part of parts) {
+    const eq = part.indexOf('=');
+    if (eq === -1) return null;
+    rule[part.slice(0, eq).toUpperCase()] = part.slice(eq + 1);
+  }
+  if (!rule.FREQ) return null;
+
+  // BYDAY codes may carry an ordinal prefix (e.g. 2MO, -1FR); we don't model
+  // those, so strip it and keep the weekday.
+  const days = (rule.BYDAY ? rule.BYDAY.split(',') : [])
+    .map(code => RRULE_TO_DOW[code.trim().toUpperCase().replace(/^[+-]?\d+/, '')])
+    .filter(n => Number.isInteger(n))
+    .sort(byWeekOrder);
+
+  const hours = parseHourList(rule.BYHOUR ?? '');
+  const minute = toMinute(rule.BYMINUTE ? rule.BYMINUTE.split(',')[0] : 0);
+
+  return { days, hours, minute };
+};
+
+// { days: [1, 3], hours: '6, 13', minute: 30 }
+//   -> 'FREQ=WEEKLY;BYDAY=MO,WE;BYHOUR=6,13;BYMINUTE=30;BYSECOND=0'
+export function scheduleToExpression({ days = [], hours = '', minute = 0 } = {}) {
+  const hourList = parseHourList(hours);
   const dows = [...new Set(days)]
     .filter(n => Number.isInteger(n) && n >= 0 && n <= 6)
     .sort((a, b) => a - b);
 
-  const hourField = hours.length ? hours.join(',') : '*';
-  const dowField = dows.length ? dows.join(',') : '*';
-  return `0 ${hourField} * * ${dowField}`;
+  const parts = ['FREQ=WEEKLY'];
+  if (dows.length) parts.push(`BYDAY=${dows.map(d => DOW_TO_RRULE[d]).join(',')}`);
+  if (hourList.length) parts.push(`BYHOUR=${hourList.join(',')}`);
+  parts.push(`BYMINUTE=${toMinute(minute)}`);
+  parts.push('BYSECOND=0');
+  return parts.join(';');
 }
 
-// '0 6,13 * * 1,3' -> { days: [1, 3], times: ['06:00:00', '13:00:00'] }
-// Returns null if the expression isn't a parseable 5-field cron.
+// 'FREQ=WEEKLY;BYDAY=MO,WE;BYHOUR=6,13;BYMINUTE=30'
+//   -> { days: [1, 3], hours: '6, 13', minute: 30 }
+// Returns null if the string isn't an RRULE we recognize.
 export function scheduleFromExpression(expression) {
-  if (typeof expression !== 'string') return null;
-  const fields = expression.trim().split(/\s+/);
-  if (fields.length !== 5) return null;
-
-  const [, hourField, , , dowField] = fields;
-  const times = expandField(hourField, 0, 23).map(h => `${pad2(h)}:00:00`);
-  const days = expandField(dowField, 0, 6).sort(byWeekOrder);
-
-  return { days, times };
+  const parsed = parseExpression(expression);
+  if (!parsed) return null;
+  return { days: parsed.days, hours: parsed.hours.join(', '), minute: parsed.minute };
 }
 
 // Human-readable summary for list/detail display; falls back to the raw string
-// if the expression can't be parsed into our weekly model. Localized via the
-// passed react-intl object (day names, list joining, and the connector text).
+// if the expression can't be parsed into our weekly model (which requires at
+// least one day and one hour). Localized via the passed react-intl object.
 export function describeSchedule(expression, intl) {
-  const parsed = scheduleFromExpression(expression);
-  if (!parsed || (!parsed.days.length && !parsed.times.length)) return expression || '';
-  const days = parsed.days.length
-    ? intl.formatList(parsed.days.map(d => dayName(intl, d)), { type: 'unit' })
-    : intl.formatMessage({ id: 'ui-rs.settings.scheduledActions.everyDay' });
-  const times = intl.formatList(parsed.times.map(t => t.slice(0, 5)), { type: 'unit' });
-  return times
-    ? intl.formatMessage({ id: 'ui-rs.settings.scheduledActions.scheduleSummary' }, { days, times })
-    : days;
+  const parsed = parseExpression(expression);
+  if (!parsed || !parsed.days.length || !parsed.hours.length) return expression || '';
+  const days = intl.formatList(parsed.days.map(d => dayName(intl, d)), { type: 'unit' });
+  const mm = String(parsed.minute).padStart(2, '0');
+  const times = intl.formatList(
+    parsed.hours.map(h => `${String(h).padStart(2, '0')}:${mm}`),
+    { type: 'unit' },
+  );
+  return intl.formatMessage(
+    { id: 'ui-rs.settings.scheduledActions.scheduleSummary' },
+    { days, times },
+  );
 }
