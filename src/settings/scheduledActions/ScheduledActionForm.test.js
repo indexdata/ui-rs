@@ -16,15 +16,10 @@ const baseInitial = {
   actionParams: { attachPdf: false },
 };
 
+const ATTACH_PDF = 'ui-rs.settings.scheduledActions.params.attachPdf';
+// Placeholder-only so the warning test asserts the {schedule} substitution itself.
 const messages = {
-  'ui-rs.settings.scheduledActions.action.email-pullslips': 'Email pull slips',
-  'ui-rs.settings.scheduledActions.action.age-requests': 'Age requests',
-  'ui-rs.settings.scheduledActions.params.attachPdf': 'Attach pull slip PDF to email',
-  'ui-rs.settings.scheduledActions.validate.batchQuery': 'Enter a query',
-  'ui-rs.settings.scheduledActions.validate.days': 'Select at least one day',
-  'ui-rs.settings.scheduledActions.validate.hoursRequired': 'Enter at least one hour',
-  'ui-rs.settings.scheduledActions.validate.hoursInvalid': 'Use comma-separated hours 0–23',
-  'ui-rs.settings.scheduledActions.validate.minute': 'Enter minutes 0–59',
+  'ui-rs.settings.scheduledActions.unsupportedSchedule': '{schedule}',
 };
 
 const byId = (id) => document.getElementById(id);
@@ -37,13 +32,14 @@ const fillRequired = () => {
   fireEvent.click(screen.getByRole('button', { name: 'Monday' }));
 };
 
-const renderForm = (onSubmit, initialValues = baseInitial) => renderWithRs(
+const renderForm = (onSubmit, { initialValues = baseInitial, ...props } = {}) => renderWithRs(
   <ScheduledActionForm
     initialValues={initialValues}
     onSubmit={onSubmit}
     onClose={() => {}}
     title="Test"
     submitLabelId="ui-rs.create"
+    {...props}
   />,
   { messages },
 );
@@ -74,7 +70,7 @@ describe('ScheduledActionForm', () => {
 
     fillRequired();
     fireEvent.change(byId('scheduled-action-minute'), { target: { value: '30' } });
-    fireEvent.click(screen.getByLabelText('Attach pull slip PDF to email'));
+    fireEvent.click(screen.getByLabelText(ATTACH_PDF));
 
     fireEvent.click(save());
 
@@ -87,17 +83,22 @@ describe('ScheduledActionForm', () => {
     expect(values.actionParams.attachPdf).toBe(true);
   });
 
+  it('warns with the cleared expression when the schedule is unsupported', () => {
+    renderForm(jest.fn(), { unsupportedSchedule: 'FREQ=MONTHLY;BYMONTHDAY=1' });
+    expect(screen.getByText('FREQ=MONTHLY;BYMONTHDAY=1')).toBeInTheDocument();
+  });
+
   it('swaps the params block and discards the prior action\'s params on action change', async () => {
     const onSubmit = jest.fn();
     renderForm(onSubmit);
 
     // Set an email-only param, then switch to a different action type.
-    fireEvent.click(screen.getByLabelText('Attach pull slip PDF to email'));
+    fireEvent.click(screen.getByLabelText(ATTACH_PDF));
     fireEvent.change(byId('scheduled-action-actionName'), { target: { value: 'age-requests' } });
 
     // The email block is replaced by the age-requests block...
     await waitFor(() => expect(byId('scheduled-action-age-standard')).toBeInTheDocument());
-    expect(screen.queryByLabelText('Attach pull slip PDF to email')).toBeNull();
+    expect(screen.queryByLabelText(ATTACH_PDF)).toBeNull();
 
     // ...and the discarded param doesn't leak into the submitted payload.
     fillRequired();

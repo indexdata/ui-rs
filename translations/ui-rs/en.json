@@ -660,6 +660,7 @@
   "settings.scheduledActions.field.batchQuery": "Query",
   "settings.scheduledActions.schedule": "Schedule",
   "settings.scheduledActions.scheduleSummary": "{days} at {times}",
+  "settings.scheduledActions.unsupportedSchedule": "This action's schedule ({schedule}) can't be edited here. The schedule fields below have been cleared. Saving will replace the existing schedule.",
   "settings.scheduledActions.options": "Options",
   "settings.scheduledActions.validate.batchQuery": "Enter a query",
   "settings.scheduledActions.validate.days": "Select at least one day",

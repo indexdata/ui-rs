@@ -6,6 +6,7 @@ import {
   AccordionSet,
   Button,
   Col,
+  MessageBanner,
   Pane,
   PaneFooter,
   Row,
@@ -23,7 +24,7 @@ import css from './ScheduledActionForm.css';
 // chosen from the registry by the current actionName. Create/Edit supply
 // initialValues + onSubmit + labels. Renders a bare Pane — the settings
 // framework provides the enclosing Paneset.
-const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, submitting, editing }) => {
+const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, submitting, editing, unsupportedSchedule }) => {
   const intl = useIntl();
   const actionOptions = Object.keys(actionRegistry).map(name => ({
     value: name,
@@ -89,6 +90,16 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
             footer={footer}
           >
             <form id="scheduled-action-form" onSubmit={handleSubmit}>
+              {/* The loaded schedule is an RRULE this form can't represent; the
+                  fields below were reset to empty, so saving overwrites it. */}
+              {unsupportedSchedule && (
+                <MessageBanner type="warning">
+                  <FormattedMessage
+                    id="ui-rs.settings.scheduledActions.unsupportedSchedule"
+                    values={{ schedule: unsupportedSchedule }}
+                  />
+                </MessageBanner>
+              )}
               <Row>
                 <Col xs={12} md={4}>
                   <Field name="actionName">

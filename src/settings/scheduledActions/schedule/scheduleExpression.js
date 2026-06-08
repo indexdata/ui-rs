@@ -67,31 +67,73 @@ export const isMinuteValid = (minute) => {
   return /^\d+$/.test(s) && Number(s) <= 59;
 };
 
-// Parse a wire RRULE into numeric { days, hours, minute }; null if it isn't an
-// RRULE we recognize (must have FREQ).
+// The only RRULE components the form can express. Anything else (INTERVAL,
+// COUNT, UNTIL, BYMONTHDAY, WKST, …) means the expression came from somewhere
+// other than this form, so we treat it as unsupported rather than guess.
+const SUPPORTED_KEYS = new Set(['FREQ', 'BYDAY', 'BYHOUR', 'BYMINUTE', 'BYSECOND']);
+
+// Parse a bare non-negative integer token in [0, max]; null if it isn't one.
+const intInRange = (token, max) => {
+  const s = String(token).trim();
+  if (!/^\d+$/.test(s)) return null;
+  const n = Number(s);
+  return n <= max ? n : null;
+};
+
+// Parse a wire RRULE into numeric { days, hours, minute }, or null if it isn't a
+// schedule this form can faithfully represent. We accept only what
+// scheduleToExpression emits: FREQ=WEEKLY with a non-empty BYDAY of plain
+// weekday codes and a non-empty BYHOUR of hours in [0, 23], optionally a single
+// BYMINUTE in [0, 59] and a BYSECOND (pinned by the broker, ignored here).
+// Anything else — a different FREQ, an unknown/duplicate component, an ordinal
+// BYDAY code (2MO), a BYMINUTE list, or an out-of-range value — yields null so
+// callers can be honest that the form doesn't cover it.
 const parseExpression = (expression) => {
   if (typeof expression !== 'string') return null;
   const parts = expression.trim().split(';').filter(Boolean);
   if (!parts.length) return null;
+
   const rule = {};
   for (const part of parts) {
     const eq = part.indexOf('=');
     if (eq === -1) return null;
-    rule[part.slice(0, eq).toUpperCase()] = part.slice(eq + 1);
+    const key = part.slice(0, eq).toUpperCase();
+    if (!SUPPORTED_KEYS.has(key) || key in rule) return null;
+    rule[key] = part.slice(eq + 1).trim();
   }
-  if (!rule.FREQ) return null;
 
-  // BYDAY codes may carry an ordinal prefix (e.g. 2MO, -1FR); we don't model
-  // those, so strip it and keep the weekday.
-  const days = (rule.BYDAY ? rule.BYDAY.split(',') : [])
-    .map(code => RRULE_TO_DOW[code.trim().toUpperCase().replace(/^[+-]?\d+/, '')])
-    .filter(n => Number.isInteger(n))
-    .sort(byWeekOrder);
+  if (rule.FREQ?.toUpperCase() !== 'WEEKLY') return null;
+  if (!rule.BYDAY || !rule.BYHOUR) return null;
 
-  const hours = parseHourList(rule.BYHOUR ?? '');
-  const minute = toMinute(rule.BYMINUTE ? rule.BYMINUTE.split(',')[0] : 0);
+  const days = [];
+  for (const code of rule.BYDAY.split(',')) {
+    // No ordinal-prefixed codes (2MO): they're not a plain weekday key.
+    const dow = RRULE_TO_DOW[code.trim().toUpperCase()];
+    if (!Number.isInteger(dow)) return null;
+    days.push(dow);
+  }
 
-  return { days, hours, minute };
+  const hours = [];
+  for (const token of rule.BYHOUR.split(',')) {
+    const h = intInRange(token, 23);
+    if (h === null) return null;
+    hours.push(h);
+  }
+
+  let minute = 0;
+  if (rule.BYMINUTE !== undefined) {
+    // A single RRULE fires on the cross-product of its BY* lists, so the form's
+    // one shared minute can't come back as a list.
+    if (rule.BYMINUTE.includes(',')) return null;
+    minute = intInRange(rule.BYMINUTE, 59);
+    if (minute === null) return null;
+  }
+
+  return {
+    days: [...new Set(days)].sort(byWeekOrder),
+    hours: [...new Set(hours)].sort((a, b) => a - b),
+    minute,
+  };
 };
 
 // { days: [1, 3], hours: '6, 13', minute: 30 }
@@ -112,19 +154,24 @@ export function scheduleToExpression({ days = [], hours = '', minute = 0 } = {})
 
 // 'FREQ=WEEKLY;BYDAY=MO,WE;BYHOUR=6,13;BYMINUTE=30'
 //   -> { days: [1, 3], hours: '6, 13', minute: 30 }
-// Returns null if the string isn't an RRULE we recognize.
+// Returns null if the expression isn't a schedule the form can represent.
 export function scheduleFromExpression(expression) {
   const parsed = parseExpression(expression);
   if (!parsed) return null;
   return { days: parsed.days, hours: parsed.hours.join(', '), minute: parsed.minute };
 }
 
+// Whether an existing wire expression maps cleanly onto the form's model. The
+// edit form uses this to warn that re-saving would replace a schedule it can't
+// show (a hand-written RRULE, a different FREQ, …).
+export const isScheduleSupported = (expression) => parseExpression(expression) !== null;
+
 // Human-readable summary for list/detail display; falls back to the raw string
-// if the expression can't be parsed into our weekly model (which requires at
-// least one day and one hour). Localized via the passed react-intl object.
+// if the expression isn't a schedule the form can represent. Localized via the
+// passed react-intl object.
 export function describeSchedule(expression, intl) {
   const parsed = parseExpression(expression);
-  if (!parsed || !parsed.days.length || !parsed.hours.length) return expression || '';
+  if (!parsed) return expression || '';
   const days = intl.formatList(parsed.days.map(d => dayName(intl, d)), { type: 'unit' });
   const mm = String(parsed.minute).padStart(2, '0');
   const times = intl.formatList(

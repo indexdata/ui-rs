@@ -6,6 +6,7 @@ import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 import ScheduledActionForm from './ScheduledActionForm';
 import { buildBatchActionBody, recordToFormValues } from './model';
+import { isScheduleSupported } from './schedule/scheduleExpression';
 
 const EditScheduledAction = ({ history, match, basePath }) => {
   const { id } = match.params;
@@ -36,6 +37,7 @@ const EditScheduledAction = ({ history, match, basePath }) => {
       title={<FormattedMessage id="ui-rs.settings.scheduledActions.edit" />}
       submitLabelId="ui-rs.save"
       editing
+      unsupportedSchedule={isScheduleSupported(data.schedule) ? undefined : data.schedule}
       onClose={close}
       initialValues={recordToFormValues(data)}
       submitting={updater.isLoading}

@@ -3,6 +3,7 @@ import {
   scheduleToExpression,
   scheduleFromExpression,
   describeSchedule,
+  isScheduleSupported,
   isHourListValid,
   isMinuteValid,
 } from './scheduleExpression';
@@ -52,14 +53,47 @@ describe('scheduleExpression', () => {
       expect(scheduleFromExpression('FREQ=WEEKLY;BYDAY=MO;BYHOUR=6').minute).toBe(0);
     });
 
-    it('orders parsed days Monday-first and tolerates ordinal BYDAY codes', () => {
-      expect(scheduleFromExpression('FREQ=WEEKLY;BYDAY=2MO,-1SU;BYHOUR=6').days).toEqual([1, 0]);
+    it('orders parsed days Monday-first', () => {
+      expect(scheduleFromExpression('FREQ=WEEKLY;BYDAY=SU,MO;BYHOUR=6').days).toEqual([1, 0]);
+    });
+
+    it('tolerates and ignores BYSECOND', () => {
+      expect(scheduleFromExpression('FREQ=WEEKLY;BYDAY=MO;BYHOUR=6;BYMINUTE=30;BYSECOND=0')).toEqual({
+        days: [1],
+        hours: '6',
+        minute: 30,
+      });
     });
 
     it('returns null when the string is not an RRULE we recognize', () => {
       expect(scheduleFromExpression('nonsense')).toBeNull();
       expect(scheduleFromExpression('BYDAY=MO')).toBeNull();
       expect(scheduleFromExpression('')).toBeNull();
+    });
+
+    it('rejects schedules the form cannot generate', () => {
+      // Non-weekly frequency
+      expect(scheduleFromExpression('FREQ=DAILY;BYHOUR=6')).toBeNull();
+      // Missing BYDAY or BYHOUR
+      expect(scheduleFromExpression('FREQ=WEEKLY;BYHOUR=6')).toBeNull();
+      expect(scheduleFromExpression('FREQ=WEEKLY;BYDAY=MO')).toBeNull();
+      // Ordinal weekday codes
+      expect(scheduleFromExpression('FREQ=WEEKLY;BYDAY=2MO;BYHOUR=6')).toBeNull();
+      // Out-of-range or non-integer hour
+      expect(scheduleFromExpression('FREQ=WEEKLY;BYDAY=MO;BYHOUR=24')).toBeNull();
+      expect(scheduleFromExpression('FREQ=WEEKLY;BYDAY=MO;BYHOUR=6,x')).toBeNull();
+      // BYMINUTE must be a single integer, not a list
+      expect(scheduleFromExpression('FREQ=WEEKLY;BYDAY=MO;BYHOUR=6;BYMINUTE=15,45')).toBeNull();
+      // Components the form doesn't model
+      expect(scheduleFromExpression('FREQ=WEEKLY;BYDAY=MO;BYHOUR=6;INTERVAL=2')).toBeNull();
+    });
+  });
+
+  describe('isScheduleSupported', () => {
+    it('is true for a form-generated expression and false otherwise', () => {
+      expect(isScheduleSupported('FREQ=WEEKLY;BYDAY=MO,WE;BYHOUR=6;BYMINUTE=0;BYSECOND=0')).toBe(true);
+      expect(isScheduleSupported('FREQ=MONTHLY;BYMONTHDAY=1;BYHOUR=6')).toBe(false);
+      expect(isScheduleSupported('')).toBe(false);
     });
   });
 
