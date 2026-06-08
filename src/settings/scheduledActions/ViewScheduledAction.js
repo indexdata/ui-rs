@@ -30,6 +30,20 @@ const ViewScheduledAction = ({ history, match, basePath }) => {
     }),
   });
 
+  // active drives both directions: enable a disabled task, disable an active one.
+  const active = data?.active;
+  const toggler = useMutation({
+    mutationFn: () => okapiKy.post(`broker/batch_actions/${id}/${active ? 'disable' : 'enable'}`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries('broker/batch_actions');
+      await queryClient.invalidateQueries(`broker/batch_actions/${id}`);
+    },
+    onError: () => callout?.sendCallout({
+      type: 'error',
+      message: <FormattedMessage id={`ui-rs.settings.scheduledActions.${active ? 'disable' : 'enable'}.error`} />,
+    }),
+  });
+
   if (!isSuccess) return null;
 
   const actionLabel = intl.formatMessage({
@@ -53,6 +67,12 @@ const ViewScheduledAction = ({ history, match, basePath }) => {
           </Button>
           <Button
             buttonStyle="dropdownItem"
+            onClick={() => { onToggle(); toggler.mutate(); }}
+          >
+            <FormattedMessage id={`ui-rs.settings.scheduledActions.${active ? 'disable' : 'enable'}`} />
+          </Button>
+          <Button
+            buttonStyle="dropdownItem"
             onClick={() => { onToggle(); setConfirmDelete(true); }}
           >
             <FormattedMessage id="ui-rs.delete" />
@@ -71,6 +91,10 @@ const ViewScheduledAction = ({ history, match, basePath }) => {
       <KeyValue
         label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.batchQuery" />}
         value={data.batchQuery}
+      />
+      <KeyValue
+        label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.active" />}
+        value={<FormattedMessage id={`ui-rs.settings.scheduledActions.status.${active ? 'active' : 'inactive'}`} />}
       />
       <ConfirmationModal
         open={confirmDelete}

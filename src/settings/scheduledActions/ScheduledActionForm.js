@@ -23,7 +23,7 @@ import css from './ScheduledActionForm.css';
 // chosen from the registry by the current actionName. Create/Edit supply
 // initialValues + onSubmit + labels. Renders a bare Pane — the settings
 // framework provides the enclosing Paneset.
-const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, submitting }) => {
+const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, submitting, editing }) => {
   const intl = useIntl();
   const actionOptions = Object.keys(actionRegistry).map(name => ({
     value: name,
@@ -96,6 +96,8 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
                       <Select
                         id="scheduled-action-actionName"
                         dataOptions={actionOptions}
+                        // PUT has no actionName: a task's action type is fixed once created.
+                        disabled={editing}
                         label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.actionName" />}
                         value={input.value}
                         onBlur={input.onBlur}

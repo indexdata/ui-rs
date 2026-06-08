@@ -35,6 +35,7 @@ const EditScheduledAction = ({ history, match, basePath }) => {
     <ScheduledActionForm
       title={<FormattedMessage id="ui-rs.settings.scheduledActions.edit" />}
       submitLabelId="ui-rs.save"
+      editing
       onClose={close}
       initialValues={recordToFormValues(data)}
       submitting={updater.isLoading}

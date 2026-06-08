@@ -20,6 +20,9 @@ const ScheduledActionsList = ({ match, history }) => {
       defaultMessage: r.actionName,
     }),
     schedule: r => describeSchedule(r.schedule, intl),
+    active: r => intl.formatMessage({
+      id: `ui-rs.settings.scheduledActions.status.${r.active ? 'active' : 'inactive'}`,
+    }),
     createdAt: r => (r.createdAt ? intl.formatDate(r.createdAt) : ''),
   };
 
@@ -42,10 +45,11 @@ const ScheduledActionsList = ({ match, history }) => {
     >
       <MultiColumnList
         contentData={items}
-        visibleColumns={['actionName', 'schedule', 'createdAt']}
+        visibleColumns={['actionName', 'schedule', 'active', 'createdAt']}
         columnMapping={{
           actionName: <FormattedMessage id="ui-rs.settings.scheduledActions.field.actionName" />,
           schedule: <FormattedMessage id="ui-rs.settings.scheduledActions.field.schedule" />,
+          active: <FormattedMessage id="ui-rs.settings.scheduledActions.field.active" />,
           createdAt: <FormattedMessage id="ui-rs.settings.scheduledActions.field.createdAt" />,
         }}
         formatter={formatter}
