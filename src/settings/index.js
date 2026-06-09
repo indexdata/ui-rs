@@ -6,7 +6,7 @@ import ScheduledActions from './scheduledActions';
 
 const sections = [
   {
-    label: <FormattedMessage id="ui-rs.settings.section.resourceSharing" />,
+    label: <FormattedMessage id="ui-rs.meta.title" />,
     pages: [
       {
         route: 'scheduled-actions',
