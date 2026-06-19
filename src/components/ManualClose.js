@@ -28,7 +28,7 @@ const ManualClose = ({ request }) => {
       callout.sendCallout({ message: <FormattedMessage id="ui-rs.manualClose.success" /> });
       close();
     } catch (err) {
-      const errMsg = err?.message ?? '';
+      const errMsg = err?.message ?? err?.response?.status ?? '';
       callout.sendCallout({ type: 'error', message: <FormattedMessage id="ui-rs.manualClose.error" values={{ errMsg }} /> });
     }
   };
