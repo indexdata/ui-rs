@@ -4,8 +4,8 @@ import { Form } from 'react-final-form';
 import { useMutation } from 'react-query';
 import { Prompt, useLocation } from 'react-router-dom';
 import { Button, Pane, Paneset, PaneMenu, KeyValue } from '@folio/stripes/components';
-import { CalloutContext, useOkapiKy, useStripes } from '@folio/stripes/core';
-import { useCloseDirect } from '@projectreshare/stripes-reshare';
+import { CalloutContext, useStripes } from '@folio/stripes/core';
+import { useCloseDirect, useOkapiKy } from '@projectreshare/stripes-reshare';
 import PatronRequestForm from '../components/PatronRequestForm';
 import { CopyrightCompliance, ServiceLevel } from '../constants/iso18626';
 import tiersBySymbol from '../util/tiersBySymbol';
@@ -125,15 +125,6 @@ const CreateRoute = () => {
       // TODO: Redirect to view page once implemented
       // For now, go back to the request list
       close();
-    },
-    onError: (err) => {
-      callout.sendCallout({ type: 'error',
-        message: (
-          <KeyValue
-            label={<FormattedMessage id="ui-rs.create.error" />}
-            value={err?.message || ''}
-          />
-        ) });
     },
   });
 
@@ -280,7 +271,19 @@ const CreateRoute = () => {
       newRecord.illRequest.billingInfo.maximumCosts.currencyCode = { '#text': stripes.currency };
     }
 
-    return creator.mutateAsync(newRecord);
+    try {
+      await creator.mutateAsync(newRecord);
+    } catch (err) {
+      callout.sendCallout({
+        type: 'error',
+        message: (
+          <KeyValue
+            label={<FormattedMessage id="ui-rs.create.error" />}
+            value={err?.message || ''}
+          />
+        ),
+      });
+    }
   };
 
   return (

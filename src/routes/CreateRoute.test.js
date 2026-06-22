@@ -87,4 +87,30 @@ describe('CreateRoute', () => {
     // No error callout on the happy path.
     expect(sendCallout).not.toHaveBeenCalled();
   });
+
+  it('surfaces an HTTP failure as an error callout and keeps the form mounted', async () => {
+    // The POST rejects (e.g. broker validation / 5xx). The rejection must be
+    // caught in submit so it becomes a callout rather than an unhandled
+    // rejection that unmounts the form into the error boundary.
+    mockOkapi.post.mockRejectedValueOnce(new Error('Boom'));
+
+    renderCreate();
+
+    setField('patronInfo.givenName', 'Ada');
+    setField('patronInfo.surname', 'Lovelace');
+    setField('bibliographicInfo.title', 'Test Title');
+    setField('bibliographicInfo.author', 'Some Author');
+    setField("serviceInfo.serviceLevel['#text']", 'Standard');
+
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
+
+    // The failure is reported via an error callout...
+    await waitFor(() => expect(sendCallout).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'error' })
+    ));
+    // ...and the form stays mounted (close() never ran, boundary not tripped).
+    expect(document.querySelector('button[type="submit"]')).not.toBeNull();
+  });
 });
